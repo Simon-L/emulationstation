@@ -4065,6 +4065,16 @@ void GuiMenu::openNetworkSettings_batocera(bool selectWifiEnable, bool selectAdh
 
                 s->addSaveFunc([this, optionsUSBGadget, selectedUSBGadget]
                 {
+                        #if defined(RK3326)
+                        std::string dr_mode = std::string(getShOutput(R"(cat /proc/device-tree/usb@ff300000/dr_mode)"));
+                        if (dr_mode != "periphera") {
+                            mWindow->pushGui(new GuiMsgBox(mWindow, _("Peripheral mode must be enabled and reboot is required, do you want to proceed?"), _("YES"),
+                                                        [] {
+                                                        runSystemCommand("/usr/bin/usb-drmode-switch peripheral", "", nullptr);
+                                                        }, _("NO"), nullptr));
+                            return;
+                        }
+                        #endif
                         if (optionsUSBGadget->changed()) {
                                 SystemConf::getInstance()->set("usbgadget.function", optionsUSBGadget->getSelected());
                                 runSystemCommand("/usr/bin/usbgadget stop", "", nullptr);
@@ -4075,6 +4085,15 @@ void GuiMenu::openNetworkSettings_batocera(bool selectWifiEnable, bool selectAdh
                                                 std::string usbip = std::string(getShOutput(R"(cat /storage/.cache/usbgadget/ip_address.conf)"));
                                                 mWindow->pushGui(new GuiMsgBox(mWindow, _("USB Networking enabled, the device IP is ") + usbip, _("OK"), nullptr));
                                         }
+                                #if defined(RK3326)
+                                if (optionsUSBGadget->getSelected() == "disabled") {
+                                    mWindow->pushGui(new GuiMsgBox(mWindow, _("Peripheral mode must be disabled and reboot is required."), _("OK"),
+                                        [] {
+                                            runSystemCommand("/usr/bin/usb-drmode-switch otg", "", nullptr);
+                                        }
+                                    ));
+                                }
+                                #endif
                         }
                 });
 
